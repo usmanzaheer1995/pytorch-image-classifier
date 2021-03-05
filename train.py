@@ -13,7 +13,7 @@ from torchvision import transforms, datasets, models
 from PIL import Image
 
 from workspace_utils import active_session
-from helper import label_mapper, classifier, save_checkpoint, load_checkpoint
+from helper import classifier, save_checkpoint, load_checkpoint
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Imager classifier trainer")
@@ -67,53 +67,52 @@ def transformers(args):
     return image_datasets, dataloaders
 
 def train(model, criterion, optimizer, trainloader, validationloader, epochs, device):
-	if (device == "gpu"):
-            device = "cuda"
-        print(f"Training {model} model...")
-        steps = 0
-        running_loss = 0
-        print_every = 10
-        for epoch in range(epochs):
-            for inputs, labels in trainloader:
-                steps += 1
-                # Move input and label tensors to the default device
-                inputs, labels = inputs.to(device), labels.to(device)
+    if (device == "gpu"):
+        device = "cuda"
+    print(f"Training {model} model...")
+    steps = 0
+    running_loss = 0
+    print_every = 10
+    for epoch in range(epochs):
+        for inputs, labels in trainloader:
+            steps += 1
+            # Move input and label tensors to the default device
+            inputs, labels = inputs.to(device), labels.to(device)
 
-                optimizer.zero_grad()
+            optimizer.zero_grad()
 
-                logps = model.forward(inputs)
-                loss = criterion(logps, labels)
-                loss.backward()
-                optimizer.step()
+            logps = model.forward(inputs)
+            loss = criterion(logps, labels)
+            loss.backward()
+            optimizer.step()
 
-                running_loss += loss.item()
+            running_loss += loss.item()
 
-                if steps % print_every == 0:
-                    test_loss = 0
-                    accuracy = 0
-                    model.eval()
-                    with torch.no_grad():
-                        for inputs, labels in validationloader:
-                            inputs, labels = inputs.to(device), labels.to(device)
-                            logps = model.forward(inputs)
-                            batch_loss = criterion(logps, labels)
+            if steps % print_every == 0:
+                test_loss = 0
+                accuracy = 0
+                model.eval()
+                with torch.no_grad():
+                    for inputs, labels in validationloader:
+                        inputs, labels = inputs.to(device), labels.to(device)
+                        logps = model.forward(inputs)
+                        batch_loss = criterion(logps, labels)
 
-                            test_loss += batch_loss.item()
+                        test_loss += batch_loss.item()
 
-                            # Calculate accuracy
-                            ps = torch.exp(logps)
-                            top_p, top_class = ps.topk(1, dim=1)
-                            equals = top_class == labels.view(*top_class.shape)
-                            accuracy += torch.mean(equals.type(torch.FloatTensor)).item()
+                        # Calculate accuracy
+                        ps = torch.exp(logps)
+                        top_p, top_class = ps.topk(1, dim=1)
+                        equals = top_class == labels.view(*top_class.shape)
+                        accuracy += torch.mean(equals.type(torch.FloatTensor)).item()
 
-                    print(f"Epoch {epoch+1}/{epochs}.. "
-                          f"Train loss: {running_loss/print_every:.3f}.. "
-                          f"Validation loss: {test_loss/len(validationloader):.3f}.. "
-                          f"Validation accuracy: {accuracy/len(validationloader):.3f}")
-                    running_loss = 0
-                    model.train()
+                print(f"Epoch {epoch+1}/{epochs}.. "
+                        f"Train loss: {running_loss/print_every:.3f}.. "
+                        f"Validation loss: {test_loss/len(validationloader):.3f}.. "
+                        f"Validation accuracy: {accuracy/len(validationloader):.3f}")
+                running_loss = 0
+                model.train()
     print("Training complete!")
-        
     
 def test_network(model, test_loader, criterion, device):
     print("Testing model accuracy...")
@@ -142,7 +141,6 @@ def main():
     Path(args.save_dir).mkdir(parents=True, exist_ok=True)
     
     image_datasets, dataloaders = transformers(args)
-    flowers_to_name = label_mapper()
     
     model, criterion, optimizer = classifier(args.arch,
                                              float(args.dropout),
@@ -157,4 +155,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
